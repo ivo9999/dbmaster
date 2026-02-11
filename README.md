@@ -1,12 +1,16 @@
 <p align="center">
+  <img src="src/app/icon.svg" alt="dbmaster" width="80" height="80" />
+</p>
+
+<h1 align="center">dbmaster</h1>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript" alt="TypeScript" />
   <img src="https://img.shields.io/badge/PostgreSQL-supported-336791?style=flat-square&logo=postgresql" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/ClickHouse-supported-FFCC00?style=flat-square&logo=clickhouse" alt="ClickHouse" />
   <img src="https://img.shields.io/badge/license-Commons%20Clause-orange?style=flat-square" alt="License" />
 </p>
-
-# dbmaster
 
 A self-hosted database management tool for teams. Connect to PostgreSQL and ClickHouse servers, browse tables, run queries, create branches, and manage access — all from a clean, modern interface.
 
