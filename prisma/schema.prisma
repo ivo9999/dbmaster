@@ -1,0 +1,197 @@
+// Prisma schema for PostgreSQL Manager
+// Application database schema for storing users, connections, branches, etc.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - authenticated via GitHub OAuth
+model User {
+  id          String    @id @default(cuid())
+  githubId    String    @unique
+  email       String    @unique
+  name        String?
+  avatar      String?
+  role        UserRole  @default(PENDING)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  approvedAt  DateTime?
+  approvedBy  String?
+
+  // Relations
+  connections  UserConnection[]
+  branches     Branch[]
+  queries      Query[]
+  auditLogs    AuditLog[]
+
+  // NextAuth required fields
+  accounts Account[]
+  sessions Session[]
+
+  @@map("users")
+}
+
+// NextAuth Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// User roles
+enum UserRole {
+  ADMIN
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+// Database connection model
+model Connection {
+  id             String      @id @default(cuid())
+  name           String
+  host           String
+  port           Int         @default(5432)
+  database       String
+  username       String
+  password       String      // Encrypted at rest
+  ssl            Boolean     @default(true)
+  dbType         String      @default("postgres")
+  environment    Environment @default(DEVELOPMENT)
+  color          String      @default("#3b82f6")
+  description    String?
+  pgbouncerUrl   String?     // Optional PgBouncer base URL (database name will be appended)
+  publicHost     String?     // Public IP/host for external connections (local dev)
+  publicPort     Int?        // Public port for external connections
+  createdBy      String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relations
+  users    UserConnection[]
+  branches Branch[]
+
+  @@map("connections")
+}
+
+// Junction table for user-connection relationships with role
+model UserConnection {
+  userId       String
+  connectionId String
+  role         ConnectionRole @default(VIEWER)
+  createdAt    DateTime       @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, connectionId])
+  @@map("user_connections")
+}
+
+// Connection roles
+enum ConnectionRole {
+  ADMIN
+  DEVELOPER
+  VIEWER
+}
+
+// Environment types
+enum Environment {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+}
+
+// Database branch model
+model Branch {
+  id           String       @id @default(cuid())
+  name         String
+  connectionId String
+  sourceDb     String
+  description  String?
+  status       BranchStatus @default(ACTIVE)
+  size         BigInt?
+  createdBy    String
+  createdAt    DateTime     @default(now())
+  lastActivity DateTime     @default(now())
+
+  connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  creator    User       @relation(fields: [createdBy], references: [id])
+
+  @@unique([connectionId, name])
+  @@map("branches")
+}
+
+// Branch status
+enum BranchStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+// Saved query model
+model Query {
+  id            String   @id @default(cuid())
+  userId        String
+  connectionId  String?
+  sql           String   @db.Text
+  name          String?
+  executionTime Int?
+  rowCount      Int?
+  isFavorite    Boolean  @default(false)
+  tags          String[]
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("queries")
+}
+
+// Audit log model
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
